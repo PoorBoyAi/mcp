@@ -1,0 +1,54 @@
+name: Publish @poorboyai/mcp to npm
+
+on:
+  push:
+    tags:
+      - "mcp-v*" # e.g. mcp-v1.2.1
+
+jobs:
+  smoke-and-publish:
+    name: Package gate then publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Fail fast if the git tag (mcp-v1.2.3) and package.json version disagree.
+      # This prevents publishing the wrong semver when someone forgets to bump
+      # the version field before tagging.
+      - name: Verify tag matches package.json version
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#mcp-v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "❌ Version mismatch: tag is mcp-v${TAG_VERSION} but package.json says ${PKG_VERSION}"
+            echo "   Update package.json version to ${TAG_VERSION} and retag."
+            exit 1
+          fi
+          echo "✅ Tag version (${TAG_VERSION}) matches package.json (${PKG_VERSION})"
+
+      # Standalone-repo gate: the package's own test suite (release-helper
+      # test + build + hosted-shim test). The old monorepo whole-project
+      # gate (pnpm run validate:release) cannot run in this repo; npm
+      # publish also runs prepublishOnly, which re-runs the same tests.
+      - name: Run package test suite
+        run: pnpm run test
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
