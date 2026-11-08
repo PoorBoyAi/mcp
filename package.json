@@ -1,0 +1,40 @@
+{
+  "name": "@poorboyai/mcp",
+  "version": "1.2.0",
+  "description": "Free hosted PoorBoyAI MCP connector using POORBOYAI_API_KEY",
+  "keywords": [
+    "mcp",
+    "poorboyai",
+    "hosted",
+    "http",
+    "model-context-protocol"
+  ],
+  "homepage": "https://poorboyai.pages.dev",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "poorboyai-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test:release-helper": "bash scripts/release-mcp.test.sh",
+    "test": "pnpm run test:release-helper && pnpm run build && tsx scripts/hosted-shim-test.ts",
+    "prepublishOnly": "pnpm run test:release-helper && pnpm run build && tsx scripts/hosted-shim-test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
